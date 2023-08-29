@@ -18,7 +18,7 @@
 #include "esp_event.h"
 #include "nvs_flash.h"
 #include "myUart.c"
-#include "connect.c"
+//#include "connect.c"
 
 #define DEFAULT_SCAN_LIST_SIZE CONFIG_EXAMPLE_SCAN_LIST_SIZE
 
@@ -151,8 +151,8 @@ void app_main(void)
     }
     ESP_ERROR_CHECK( ret );
 
-    ESP_LOGI(TAG2, "ESP_WIFI_MODE_STA");
-    wifi_init_sta();
+    //ESP_LOGI(TAG2, "ESP_WIFI_MODE_STA");
+    //wifi_init_sta();
     
     wifi_scan();
     

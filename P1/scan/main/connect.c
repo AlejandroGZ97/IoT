@@ -1,4 +1,4 @@
-#include <string.h>
+/*#include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
@@ -11,11 +11,6 @@
 #include "lwip/err.h"
 #include "lwip/sys.h"
 
-/* The examples use WiFi configuration that you can set via project configuration menu
-
-   If you'd rather not, just change the below entries to strings with
-   the config you want - ie #define EXAMPLE_WIFI_SSID "mywifissid"
-*/
 #define EXAMPLE_ESP_WIFI_SSID      "kanton2.4"
 #define EXAMPLE_ESP_WIFI_PASS      "3ventanotas"
 #define EXAMPLE_ESP_MAXIMUM_RETRY  2
@@ -148,4 +143,4 @@ void wifi_init_sta(void)
     } else {
         ESP_LOGE(TAG2, "UNEXPECTED EVENT");
     }
-}
+}*/
