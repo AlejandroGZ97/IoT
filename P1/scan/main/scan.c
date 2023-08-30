@@ -1,15 +1,3 @@
-/* Scan Example
-
-   This example code is in the Public Domain (or CC0 licensed, at your option.)
-
-   Unless required by applicable law or agreed to in writing, this
-   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-   CONDITIONS OF ANY KIND, either express or implied.
-*/
-
-/*
-    This example shows how to scan for available set of APs.
-*/
 #include <string.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
@@ -18,7 +6,7 @@
 #include "esp_event.h"
 #include "nvs_flash.h"
 #include "myUart.c"
-//#include "connect.c"
+#include "connect.c"
 
 #define DEFAULT_SCAN_LIST_SIZE CONFIG_EXAMPLE_SCAN_LIST_SIZE
 
@@ -53,57 +41,6 @@ static void print_auth_mode(int authmode)
         break;
     default:
         ESP_LOGI(TAG, "Authmode \tWIFI_AUTH_UNKNOWN");
-        break;
-    }
-}
-
-static void print_cipher_type(int pairwise_cipher, int group_cipher)
-{
-    switch (pairwise_cipher) {
-    case WIFI_CIPHER_TYPE_NONE:
-        ESP_LOGI(TAG, "Pairwise Cipher \tWIFI_CIPHER_TYPE_NONE");
-        break;
-    case WIFI_CIPHER_TYPE_WEP40:
-        ESP_LOGI(TAG, "Pairwise Cipher \tWIFI_CIPHER_TYPE_WEP40");
-        break;
-    case WIFI_CIPHER_TYPE_WEP104:
-        ESP_LOGI(TAG, "Pairwise Cipher \tWIFI_CIPHER_TYPE_WEP104");
-        break;
-    case WIFI_CIPHER_TYPE_TKIP:
-        ESP_LOGI(TAG, "Pairwise Cipher \tWIFI_CIPHER_TYPE_TKIP");
-        break;
-    case WIFI_CIPHER_TYPE_CCMP:
-        ESP_LOGI(TAG, "Pairwise Cipher \tWIFI_CIPHER_TYPE_CCMP");
-        break;
-    case WIFI_CIPHER_TYPE_TKIP_CCMP:
-        ESP_LOGI(TAG, "Pairwise Cipher \tWIFI_CIPHER_TYPE_TKIP_CCMP");
-        break;
-    default:
-        ESP_LOGI(TAG, "Pairwise Cipher \tWIFI_CIPHER_TYPE_UNKNOWN");
-        break;
-    }
-
-    switch (group_cipher) {
-    case WIFI_CIPHER_TYPE_NONE:
-        ESP_LOGI(TAG, "Group Cipher \tWIFI_CIPHER_TYPE_NONE");
-        break;
-    case WIFI_CIPHER_TYPE_WEP40:
-        ESP_LOGI(TAG, "Group Cipher \tWIFI_CIPHER_TYPE_WEP40");
-        break;
-    case WIFI_CIPHER_TYPE_WEP104:
-        ESP_LOGI(TAG, "Group Cipher \tWIFI_CIPHER_TYPE_WEP104");
-        break;
-    case WIFI_CIPHER_TYPE_TKIP:
-        ESP_LOGI(TAG, "Group Cipher \tWIFI_CIPHER_TYPE_TKIP");
-        break;
-    case WIFI_CIPHER_TYPE_CCMP:
-        ESP_LOGI(TAG, "Group Cipher \tWIFI_CIPHER_TYPE_CCMP");
-        break;
-    case WIFI_CIPHER_TYPE_TKIP_CCMP:
-        ESP_LOGI(TAG, "Group Cipher \tWIFI_CIPHER_TYPE_TKIP_CCMP");
-        break;
-    default:
-        ESP_LOGI(TAG, "Group Cipher \tWIFI_CIPHER_TYPE_UNKNOWN");
         break;
     }
 }
@@ -150,12 +87,9 @@ void app_main(void)
         ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK( ret );
+    
+    //wifi_scan();
 
-    //ESP_LOGI(TAG2, "ESP_WIFI_MODE_STA");
-    //wifi_init_sta();
-    
-    wifi_scan();
-    
     while(1)
     {
         char cad[30] ={0};
@@ -167,7 +101,12 @@ void app_main(void)
         uartClrScr(PC_UART_PORT);
         delayMs(500);
         if (myAtoi(cad) >= 1){
+            ESP_LOGI(TAG2, "ESP_WIFI_MODE_STA");
+            const char *wifi_ssid = WIFI_SSID;
+            const char *wifi_pass = WIFI_PASS;
+            connect_to_wifi(wifi_ssid, wifi_pass);
 
+            delayMs(5000);
         }
         
         else {
