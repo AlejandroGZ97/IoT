@@ -1,13 +1,13 @@
 #include "connect.h"
 
 /* Función para conectarse a una red WiFi */
-static void connect_to_wifi(const char *ssid, const char *password) {
+static void connect_to_wifi(const char *ssid, const char *password, char cad[], char cad2[]) {
     ESP_LOGI(TAG2, "Conectando a la red WiFi...");
     
     wifi_config_t wifi_config = {
         .sta = {
-            .ssid = WIFI_SSID,
-            .password = WIFI_PASS,
+            .ssid = "",
+            .password = "",
         },
     };
 
@@ -16,6 +16,8 @@ static void connect_to_wifi(const char *ssid, const char *password) {
 
     ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
     ESP_ERROR_CHECK(esp_wifi_connect());
+    ESP_LOGI(TAG, "MEAN_RSSI \t\t%d", meanRSSI);
+    ESP_LOGI(TAG, "MY_RSSI \t\t%d", myRSSI);
 }
 /*
 void wifi_event_handler(void* arg, esp_event_base_t event_base,
