@@ -9,9 +9,88 @@
 #include "esp_netif.h"
 #include "esp_http_client.h"
 #include "esp_tls.h"
+#include "driver/i2c.h"
 
-#define SSID ""
-#define PASS ""
+#define I2C_MASTER_SCL_IO 22         // Pin GPIO para el reloj SCL del bus I2C
+#define I2C_MASTER_SDA_IO 21         // Pin GPIO para el dato SDA del bus I2C
+#define I2C_MASTER_NUM 0             // I2C port número
+#define I2C_MASTER_FREQ_HZ 100000    // Frecuencia de operación del bus I2C
+#define AHT10_I2C_ADDR 0x38          // Dirección I2C del sensor AHT10
+
+#define I2C_MASTER_TX_BUF_DISABLE   0
+#define I2C_MASTER_RX_BUF_DISABLE   0
+
+#define AHT10_CMD_CALIBRATE 0xE1     // Comando de calibración del sensor
+#define AHT10_CMD_MEASURE 0xAC       // Comando de medición del sensor
+#define AHT10_STATUS_BUSY 0x80       // Estado de ocupado del sensor
+
+static const char *TAG2 = "AHT10";
+uint8_t data[6];
+const char dato[30] = "\0";
+//"{ \"value1\" : \"%d\" }"
+
+#define SSID "P3_AGZ"
+#define PASS "clavePrac3"
+
+char* TAG = "Client";
+
+static esp_err_t i2c_master_init()
+{
+    int i2c_master_port = I2C_MASTER_NUM;
+
+    i2c_config_t conf = {
+        .mode = I2C_MODE_MASTER,
+        .sda_io_num = I2C_MASTER_SDA_IO,
+        .scl_io_num = I2C_MASTER_SCL_IO,
+        .sda_pullup_en = GPIO_PULLUP_ENABLE,
+        .scl_pullup_en = GPIO_PULLUP_ENABLE,
+        .master.clk_speed = I2C_MASTER_FREQ_HZ,
+    };
+
+    i2c_param_config(i2c_master_port, &conf);
+
+    return i2c_driver_install(i2c_master_port, conf.mode, I2C_MASTER_RX_BUF_DISABLE, I2C_MASTER_TX_BUF_DISABLE, 0);
+}
+
+static void aht10_calibrate()
+{
+    uint8_t cmd[3] = {AHT10_CMD_CALIBRATE, 0x08, 0x00};
+    i2c_cmd_handle_t cmd_handle = i2c_cmd_link_create();
+    i2c_master_start(cmd_handle);
+    i2c_master_write_byte(cmd_handle, AHT10_I2C_ADDR << 1 | I2C_MASTER_WRITE, true);
+    i2c_master_write(cmd_handle, cmd, sizeof(cmd), true);
+    i2c_master_stop(cmd_handle);
+    i2c_master_cmd_begin(I2C_MASTER_NUM, cmd_handle, 1000 / portTICK_PERIOD_MS);
+    i2c_cmd_link_delete(cmd_handle);
+}
+
+static void aht10_read_data(uint8_t* data)
+{
+    uint8_t cmd[3] = {AHT10_CMD_MEASURE, 0x33, 0x00};
+    i2c_cmd_handle_t cmd_handle = i2c_cmd_link_create();
+    i2c_master_start(cmd_handle);
+    i2c_master_write_byte(cmd_handle, AHT10_I2C_ADDR << 1 | I2C_MASTER_WRITE, true);
+    i2c_master_write(cmd_handle, cmd, sizeof(cmd), true);
+    i2c_master_stop(cmd_handle);
+    i2c_master_cmd_begin(I2C_MASTER_NUM, cmd_handle, 1000 / portTICK_PERIOD_MS);
+    i2c_cmd_link_delete(cmd_handle);
+
+    vTaskDelay(75 / portTICK_PERIOD_MS); // Esperar 75 ms
+
+    cmd_handle = i2c_cmd_link_create();
+    i2c_master_start(cmd_handle);
+    i2c_master_write_byte(cmd_handle, AHT10_I2C_ADDR << 1 | I2C_MASTER_READ, true);
+    i2c_master_read(cmd_handle, data, 6, I2C_MASTER_LAST_NACK);
+    i2c_master_stop(cmd_handle);
+    i2c_master_cmd_begin(I2C_MASTER_NUM, cmd_handle, 1000 / portTICK_PERIOD_MS);
+    i2c_cmd_link_delete(cmd_handle);
+}
+
+static float aht10_calculate_temperature(const uint8_t *data)
+{
+    int32_t rawTemperature = ((data[3] & 0x0F) << 16) | (data[4] << 8) | data[5];
+    return (rawTemperature * 200.0 / 1048576.0) - 50.0;
+}
 
 static void wifi_event_handler(void *event_handler_arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
@@ -56,7 +135,7 @@ void wifi_connection()
     esp_wifi_connect();
 }
 
-esp_err_t client_event_get_handler(esp_http_client_event_handle_t evt)
+esp_err_t client_event_post_handler(esp_http_client_event_handle_t evt)
 {
     switch (evt->event_id)
     {
@@ -70,54 +149,58 @@ esp_err_t client_event_get_handler(esp_http_client_event_handle_t evt)
     return ESP_OK;
 }
 
-static void rest_get()
+static void rest_post()
 {
-    esp_http_client_config_t config_get = {
-        .url = "https://maker.ifttt.com/trigger/sensor_temperatura/json/with/key/",
-        .method = HTTP_METHOD_GET,
+    esp_http_client_config_t config_post = {
+        .url = "http://maker.ifttt.com/trigger/sensor_temperatura/json/with/key/gjWQ-CesZcn75G52eWJgAHs7SxFIOFp93DdC46JH0fx",
+        .method = HTTP_METHOD_POST,
         .cert_pem = NULL,
-        .event_handler = client_event_get_handler
+        .event_handler = client_event_post_handler
     };
 
-    // Configura opciones TLS
-    esp_tls_cfg_t tls_cfg = {
-        .cacert_buf = NULL,  // Aquí puedes proporcionar un certificado CA para verificar el servidor}
-        .psk_hint_key = NULL,
-        .alpn_protos = NULL,
-        .common_name = "maker.ifttt.com"  // El nombre de host del servidor
-    };
+    esp_http_client_handle_t client = esp_http_client_init(&config_post);
+    
+    esp_err_t err = esp_http_client_perform(client);
 
-    //config_get.tls_cfg = &tls_cfg;  // Asigna la configuración TLS al cliente 
-    //esp_tls_t *tls_cfg = esp_tls_init();
-
-    esp_http_client_handle_t client = esp_http_client_init(&config_get);
-    #ifdef CONFIG_ESP_HTTP_CLIENT_ENABLE_HTTPS
-    esp_transport_handle_t ssl;
-    _success = (
-                   (ssl = esp_transport_ssl_init()) &&
-                   (esp_transport_set_default_port(ssl, DEFAULT_HTTPS_PORT) == ESP_OK) &&
-                   (esp_transport_list_add(client->transport_list, ssl, "https") == ESP_OK)
-               );
-    if (!_success) {
-        esp_http_client_cleanup(client);
-        return NULL;
+    if (err == ESP_OK) {
+    ESP_LOGI(TAG, "Status = %d, content_length = %d",
+            esp_http_client_get_status_code(client),
+            esp_http_client_get_content_length(client));
     }
-    if (config->cert_pem) {
-        esp_transport_ssl_set_cert_data(ssl, config->cert_pem, strlen(config->cert_pem));
-    }
-#endif
-    esp_http_client_perform(client);
-    //esp_http_client_cleanup(client);
+    
+    esp_http_client_set_post_field(client, dato, strlen(dato));
+    esp_http_client_cleanup(client);
 }
 
 void app_main(void)
 {
+    float temperature;
+     
     nvs_flash_init();
     wifi_connection();
+    vTaskDelay(20000 / portTICK_PERIOD_MS);
+    
+    
 
-    vTaskDelay(10000 / portTICK_PERIOD_MS);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
     printf("WIFI was initiated ...........\n\n");
 
-    rest_get();
-    vTaskDelay(20000 / portTICK_PERIOD_MS);
+    ESP_ERROR_CHECK(i2c_master_init());
+    ESP_LOGI(TAG2, "Inicializado I2C master");
+    aht10_calibrate();
+
+    while (1)
+    {
+        aht10_read_data(data);
+        temperature = aht10_calculate_temperature(data);
+        ESP_LOGI(TAG, "Temperatura: %.2f °C", temperature);
+        sprintf(dato,"{ \"value1\" : \"%.2f\" }",temperature);
+        if (temperature < 25)
+        {
+            rest_post();
+            vTaskDelay(20000 / portTICK_PERIOD_MS);
+        }
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
+
 }
