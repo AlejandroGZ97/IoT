@@ -26,11 +26,11 @@
 
 static const char *TAG2 = "AHT10";
 uint8_t data[6];
-const char dato[30] = "\0";
-//"{ \"value1\" : \"%d\" }"
+char dato[30] = "";
+//"{\"Value1\":\"1\"}"
 
-#define SSID "P3_AGZ"
-#define PASS "clavePrac3"
+#define SSID ""
+#define PASS ""
 
 char* TAG = "Client";
 
@@ -152,13 +152,15 @@ esp_err_t client_event_post_handler(esp_http_client_event_handle_t evt)
 static void rest_post()
 {
     esp_http_client_config_t config_post = {
-        .url = "http://maker.ifttt.com/trigger/sensor_temperatura/json/with/key/gjWQ-CesZcn75G52eWJgAHs7SxFIOFp93DdC46JH0fx",
+        .url = "http://maker.ifttt.com/trigger/sensor_temperatura/json/with/key/",
         .method = HTTP_METHOD_POST,
         .cert_pem = NULL,
         .event_handler = client_event_post_handler
     };
 
     esp_http_client_handle_t client = esp_http_client_init(&config_post);
+    
+    esp_http_client_set_post_field(client, dato, strlen(dato));
     
     esp_err_t err = esp_http_client_perform(client);
 
@@ -168,7 +170,6 @@ static void rest_post()
             esp_http_client_get_content_length(client));
     }
     
-    esp_http_client_set_post_field(client, dato, strlen(dato));
     esp_http_client_cleanup(client);
 }
 
@@ -178,29 +179,33 @@ void app_main(void)
      
     nvs_flash_init();
     wifi_connection();
-    vTaskDelay(20000 / portTICK_PERIOD_MS);
+    vTaskDelay(10000 / portTICK_PERIOD_MS);
     
-    
-
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
     printf("WIFI was initiated ...........\n\n");
 
     ESP_ERROR_CHECK(i2c_master_init());
     ESP_LOGI(TAG2, "Inicializado I2C master");
     aht10_calibrate();
 
-    while (1)
+    aht10_read_data(data);
+    temperature = aht10_calculate_temperature(data);
+    ESP_LOGI(TAG, "Temperatura: %.2f °C", temperature);
+    sprintf(dato,"{ \"Value1\" : \"%.2f\"}",temperature);
+
+    rest_post();
+
+    while (0)
     {
         aht10_read_data(data);
         temperature = aht10_calculate_temperature(data);
         ESP_LOGI(TAG, "Temperatura: %.2f °C", temperature);
-        sprintf(dato,"{ \"value1\" : \"%.2f\" }",temperature);
-        if (temperature < 25)
+        sprintf(dato,"Temperatura : %.2f ",temperature);
+        if (temperature > 25)
         {
             rest_post();
             vTaskDelay(20000 / portTICK_PERIOD_MS);
         }
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
     }
 
 }
