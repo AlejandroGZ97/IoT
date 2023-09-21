@@ -26,11 +26,11 @@
 
 static const char *TAG2 = "AHT10";
 uint8_t data[6];
-char dato[30] = "";
+char dato[120];
 //"{\"Value1\":\"1\"}"
 
-#define SSID ""
-#define PASS ""
+#define SSID "P3_AGZ"
+#define PASS "clavePrac3"
 
 char* TAG = "Client";
 
@@ -151,6 +151,18 @@ esp_err_t client_event_post_handler(esp_http_client_event_handle_t evt)
 
 static void rest_post()
 {
+/*
+    esp_http_client_config_t config_post = {
+        //.url = "http://maker.ifttt.com/trigger/sensor_temperatura/json/with/key/",
+        .url = dato,
+        .cert_pem = NULL,
+        .timeout_ms = 10000,  // Añade un tiempo de espera si es necesario
+        .disable_auto_redirect = false, // Si IFTTT tiene redirecciones, esto ayudará
+        .is_async = false,
+        .max_redirection_count = 5, // Añade un máximo de redirecciones si es necesario
+        .skip_cert_common_name_check = true, // Desactiva la comprobación de nombre común
+    };*/
+
     esp_http_client_config_t config_post = {
         .url = "http://maker.ifttt.com/trigger/sensor_temperatura/json/with/key/",
         .method = HTTP_METHOD_POST,
@@ -159,7 +171,7 @@ static void rest_post()
     };
 
     esp_http_client_handle_t client = esp_http_client_init(&config_post);
-    
+
     esp_http_client_set_post_field(client, dato, strlen(dato));
     
     esp_err_t err = esp_http_client_perform(client);
@@ -190,22 +202,22 @@ void app_main(void)
     aht10_read_data(data);
     temperature = aht10_calculate_temperature(data);
     ESP_LOGI(TAG, "Temperatura: %.2f °C", temperature);
-    sprintf(dato,"{ \"Value1\" : \"%.2f\"}",temperature);
-
+/*
+    sprintf(dato, "http://maker.ifttt.com/trigger/sensor_temperatura/json/with/key/gjWQ-CesZcn75G52eWJgAHs7SxFIOFp93DdC46JH0fx?value1=10");
+    ESP_LOGI(TAG, "%s", dato);
     rest_post();
-
-    while (0)
+*/
+    while (1)
     {
         aht10_read_data(data);
         temperature = aht10_calculate_temperature(data);
         ESP_LOGI(TAG, "Temperatura: %.2f °C", temperature);
-        sprintf(dato,"Temperatura : %.2f ",temperature);
-        if (temperature > 25)
-        {
+        sprintf(dato,"Temperatura : %.2f °C",temperature);
+        if(temperature > 25){
             rest_post();
-            vTaskDelay(20000 / portTICK_PERIOD_MS);
+            vTaskDelay(10000 / portTICK_PERIOD_MS);
         }
         vTaskDelay(5000 / portTICK_PERIOD_MS);
     }
-
+    esp_wifi_disconnect();
 }
