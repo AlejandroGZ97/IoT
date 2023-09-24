@@ -27,6 +27,7 @@
 
 static const char *TAG = "MQTT_TCP";
 
+//net start/stop mosquitto
 //subscribe> mosquitto_sub -h mqtt.eclipseprojects.io -t my_topic
 //publish> mosquitto_pub -h mqtt.eclipseprojects.io -t my_topic -m "Dato desde PC"
 
