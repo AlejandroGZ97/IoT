@@ -9,11 +9,6 @@
 #include "esp_netif.h"
 #include "protocol_examples_common.h"
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/semphr.h"
-#include "freertos/queue.h"
-
 #include "lwip/sockets.h"
 #include "lwip/dns.h"
 #include "lwip/netdb.h"
@@ -21,11 +16,17 @@
 #include "esp_log.h"
 #include "mqtt_client.h"
 
+#include "sensor_pt2.c"
+
 #define SSID "P4_AGZ"
 #define PASS "clavePrac4"
 #define BROKER_URL  "mqtt://mqtt.eclipseprojects.io"
+#define MY_TOPIC    "sensor_temp"
+#define TEMP_MSG_SIZE   25
 
 static const char *TAG = "MQTT_TCP";
+esp_mqtt_client_handle_t current_client;
+int msg_id;
 
 //net start/stop mosquitto
 //subscribe> mosquitto_sub -h mqtt.eclipseprojects.io -t my_topic
@@ -87,12 +88,9 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     ESP_LOGD(TAG, "Event dispatched from event loop base=%s, event_id=%d", base, event_id);
     esp_mqtt_event_handle_t event = event_data;
     esp_mqtt_client_handle_t client = event->client;
-    int msg_id;
     switch (event->event_id) {
     case MQTT_EVENT_CONNECTED:
         ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
-        msg_id = esp_mqtt_client_subscribe(client, "my_topic", 0);
-        msg_id = esp_mqtt_client_publish(client, "my_topic", "Dato desde ESP32.....", 0, 1, 0);
         break;
     case MQTT_EVENT_DISCONNECTED:
         ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
@@ -138,6 +136,7 @@ static void mqtt_app_start(void)
     };
 
     esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_cfg);
+    current_client = client;
     /* The last argument may be used to pass data to the event handler, in this example mqtt_event_handler */
     esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, client);
     esp_mqtt_client_start(client);
@@ -145,10 +144,31 @@ static void mqtt_app_start(void)
 
 void app_main(void)
 {
+    float temperature;
+    char temp[TEMP_MSG_SIZE];
     nvs_flash_init();
     wifi_connection();
 
     printf("WIFI was initiated ...........\n\n");
 
     mqtt_app_start();
+    vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+    ESP_ERROR_CHECK(i2c_master_init());
+    ESP_LOGI(TAG2, "Inicializado I2C master");
+    aht10_calibrate();
+    vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+    while (1)
+    {
+        aht10_read_data(data);
+        temperature = aht10_calculate_temperature(data);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        ESP_LOGI(TAG2, "Temperatura: %.2f", temperature);
+        sprintf(temp,"Temperatura : %.2f",temperature);
+
+        msg_id = esp_mqtt_client_publish(current_client, MY_TOPIC, temp,0,1,0);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
+    
 }
