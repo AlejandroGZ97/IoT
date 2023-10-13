@@ -18,8 +18,8 @@
 
 #include "sensor_pt2.c"
 
-#define SSID "P4_AGZ"
-#define PASS "clavePrac4"
+#define SSID "P_AGZ"
+#define PASS "clavePrac"
 #define BROKER_URL  "mqtt://mqtt.eclipseprojects.io"
 #define MY_TOPIC    "sensor_temp"
 #define TEMP_MSG_SIZE   25
