@@ -163,7 +163,7 @@ void app_main(void)
         ESP_LOGI(TAG2, "Temperatura: %.3f", temperature);
         sprintf(temp,"{temperature:%.3f}",temperature);
 
-        msg_id = esp_mqtt_client_publish(current_client, MY_TOPIC, ,temp0,1,0);
+        msg_id = esp_mqtt_client_publish(current_client, MY_TOPIC,temp,0,1,0);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
     
