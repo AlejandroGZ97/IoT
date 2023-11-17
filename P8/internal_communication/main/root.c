@@ -42,7 +42,7 @@ static mesh_addr_t mesh_parent_addr;
 static int mesh_layer = -1;
 static esp_netif_t *netif_sta = NULL;
 char msg[MSG_SIZE] = "hola";
-const char avoidAddr[MSG_SIZE];
+char avoidAddr[MSG_SIZE];
 bool pendingMsg = false;
 mesh_addr_t from;
 
@@ -66,7 +66,7 @@ void esp_mesh_p2p_tx_main(void *arg)
     data.proto = MESH_PROTO_BIN;
     data.tos = MESH_TOS_P2P;
     is_running = true;
-    const char aux[MSG_SIZE];
+    char aux[MSG_SIZE];
 
     while (is_running) {
         /* non-root do nothing but print */
@@ -93,12 +93,14 @@ void esp_mesh_p2p_tx_main(void *arg)
         
             for (i = 0; i < route_table_size; i++) {
                 sprintf(aux,MACSTR,MAC2STR(route_table[i].addr));
-                if (strcmp(aux,avoidAddr) || i == 0)
+                if (!strcmp(aux,avoidAddr) || i == 0)
                 {
+                    ESP_LOGE(MESH_TAG,MACSTR" / "MACSTR" / NO",MAC2STR(from.addr),MAC2STR(route_table[i].addr));
                     err = 0;
                 }
                 else
                 {
+                    ESP_LOGE(MESH_TAG,MACSTR" / "MACSTR" / SI",MAC2STR(from.addr),MAC2STR(route_table[i].addr));
                     err = esp_mesh_send(&route_table[i], &data, MESH_DATA_P2P, NULL, 0);
                 }
                     

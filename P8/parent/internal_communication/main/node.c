@@ -97,10 +97,16 @@ void esp_mesh_p2p_tx_main(void *arg)
 
             for (i = 0; i < route_table_size; i++) {
                 sprintf(aux,MACSTR,MAC2STR(route_table[i].addr));
-                if (strcmp((char*)from.addr,(char*)route_table[i].addr) || i == 0)
+                if (!strcmp(aux,avoidAddr) || i == 0)
+                {
+                    ESP_LOGE(MESH_TAG,MACSTR" / "MACSTR" / NO",MAC2STR(from.addr),MAC2STR(route_table[i].addr));
                     err = 0;
+                }
                 else
+                {
+                    ESP_LOGE(MESH_TAG,MACSTR" / "MACSTR" / SI",MAC2STR(from.addr),MAC2STR(route_table[i].addr));
                     err = esp_mesh_send(&route_table[i], &data, MESH_DATA_P2P, NULL, 0);
+                }
                 
                 if (err) {
                     ESP_LOGE(MESH_TAG,
@@ -110,7 +116,7 @@ void esp_mesh_p2p_tx_main(void *arg)
                             err, data.proto, data.tos);
                 }
             }
-            vTaskDelay(2500 / portTICK_PERIOD_MS);
+            vTaskDelay(2000 / portTICK_PERIOD_MS);
             continue;
         }
     }
