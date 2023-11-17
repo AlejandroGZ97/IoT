@@ -42,7 +42,7 @@ static mesh_addr_t mesh_parent_addr;
 static int mesh_layer = -1;
 static esp_netif_t *netif_sta = NULL;
 char msg[MSG_SIZE] = "hola";
-char avoidAddr[MSG_SIZE];
+const char avoidAddr[MSG_SIZE];
 bool pendingMsg = false;
 mesh_addr_t from;
 
@@ -66,7 +66,7 @@ void esp_mesh_p2p_tx_main(void *arg)
     data.proto = MESH_PROTO_BIN;
     data.tos = MESH_TOS_P2P;
     is_running = true;
-    char aux[MSG_SIZE];
+    const char aux[MSG_SIZE];
 
     while (is_running) {
         /* non-root do nothing but print */
@@ -92,11 +92,15 @@ void esp_mesh_p2p_tx_main(void *arg)
             pendingMsg = false;
         
             for (i = 0; i < route_table_size; i++) {
-                //sprintf(aux,MACSTR,MAC2STR(route_table[i].addr));
-                if (strcmp((char*)from.addr,(char*)route_table[i].addr) || i == 0)
+                sprintf(aux,MACSTR,MAC2STR(route_table[i].addr));
+                if (strcmp(aux,avoidAddr) || i == 0)
+                {
                     err = 0;
+                }
                 else
+                {
                     err = esp_mesh_send(&route_table[i], &data, MESH_DATA_P2P, NULL, 0);
+                }
                     
                 if (err) {
                     ESP_LOGE(MESH_TAG,
@@ -130,7 +134,7 @@ void esp_mesh_p2p_rx_main(void *arg)
         if (!pendingMsg)
         {
             err = esp_mesh_recv(&from, &data, portMAX_DELAY, &flag, NULL, 0);
-            //sprintf(avoidAddr,MACSTR,MAC2STR(from.addr));
+            sprintf(avoidAddr,MACSTR,MAC2STR(from.addr));
             sprintf(msg,"%s",data.data);
             pendingMsg = true;
             if (err != ESP_OK || !data.size) {

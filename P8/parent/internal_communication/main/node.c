@@ -43,7 +43,7 @@ static mesh_addr_t mesh_parent_addr;
 static int mesh_layer = -1;
 static esp_netif_t *netif_sta = NULL;
 char msg[MSG_SIZE] = "STARTING...";
-char avoidAddr[MSG_SIZE];
+const char avoidAddr[MSG_SIZE];
 bool pendingMsg = false;
 float temperature;
 char sensorMsg[MSG_SIZE];
@@ -69,7 +69,7 @@ void esp_mesh_p2p_tx_main(void *arg)
     data.proto = MESH_PROTO_BIN;
     data.tos = MESH_TOS_P2P;
     is_running = true;
-    char aux[MSG_SIZE];
+    const char aux[MSG_SIZE];
 
     while (is_running) {
         /* non-root do nothing but print */
@@ -110,7 +110,7 @@ void esp_mesh_p2p_tx_main(void *arg)
                             err, data.proto, data.tos);
                 }
             }
-            vTaskDelay(2000 / portTICK_PERIOD_MS);
+            vTaskDelay(2500 / portTICK_PERIOD_MS);
             continue;
         }
     }
