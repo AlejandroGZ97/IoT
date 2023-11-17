@@ -131,6 +131,17 @@ void esp_mesh_p2p_rx_main(void *arg)
     data.size = RX_SIZE;
     is_running = true;
 
+    int i;
+    int send_count = 0;
+    mesh_addr_t route_table[CONFIG_MESH_ROUTE_TABLE_SIZE];
+    int route_table_size = 0;
+    data.data = tx_buf;
+    data.size = sizeof(tx_buf);
+    data.proto = MESH_PROTO_BIN;
+    data.tos = MESH_TOS_P2P;
+    is_running = true;
+    char aux[MSG_SIZE];
+
     while (is_running) {
         data.size = RX_SIZE;
         if (!pendingMsg)
@@ -148,7 +159,54 @@ void esp_mesh_p2p_rx_main(void *arg)
             ESP_LOGI(MESH_TAG, "Received message from "MACSTR": %s", MAC2STR(from.addr), data.data);
         }
         
-            
+        /* non-root do nothing but print */
+        if (!esp_mesh_is_root()) {
+            ESP_LOGI(MESH_TAG, "layer:%d, rtableSize:%d, %s", mesh_layer,
+                     esp_mesh_get_routing_table_size(),
+                     (is_mesh_connected && esp_mesh_is_root()) ? "ROOT" : is_mesh_connected ? "NODE" : "DISCONNECT");
+            vTaskDelay(10 * 1000 / portTICK_PERIOD_MS);
+            continue;
+        }
+        esp_mesh_get_routing_table((mesh_addr_t *) &route_table,
+                                   CONFIG_MESH_ROUTE_TABLE_SIZE * 6, &route_table_size);
+        if (send_count && !(send_count % 100)) {
+            ESP_LOGI(MESH_TAG, "size:%d/%d,send_count:%d", route_table_size,
+                     esp_mesh_get_routing_table_size(), send_count);
+        }
+        send_count++;
+
+        memcpy(tx_buf, msg, sizeof(msg));
+
+        if (pendingMsg)
+        {
+            pendingMsg = false;
+        
+            for (i = 0; i < route_table_size; i++) {
+                sprintf(aux,MACSTR,MAC2STR(route_table[i].addr));
+                if (!strcmp(aux,avoidAddr) || i == 0)
+                {
+                    ESP_LOGE(MESH_TAG,MACSTR" / "MACSTR" / NO",MAC2STR(from.addr),MAC2STR(route_table[i].addr));
+                    err = 0;
+                }
+                else
+                {
+                    ESP_LOGE(MESH_TAG,MACSTR" / "MACSTR" / SI",MAC2STR(from.addr),MAC2STR(route_table[i].addr));
+                    err = esp_mesh_send(&route_table[i], &data, MESH_DATA_P2P, NULL, 0);
+                }
+                    
+                if (err) {
+                    ESP_LOGE(MESH_TAG,
+                            "[ROOT-2-UNICAST:%d][L:%d]parent:"MACSTR" to "MACSTR", heap:%" PRId32 "[err:0x%x, proto:%d, tos:%d]",
+                            send_count, mesh_layer, MAC2STR(mesh_parent_addr.addr),
+                            MAC2STR(route_table[i].addr), esp_get_minimum_free_heap_size(),
+                            err, data.proto, data.tos);
+                }
+            }
+        }
+        /* if route_table_size is less than 10, add delay to avoid watchdog in this task. */
+        if (route_table_size < 10) {
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
+        }
     }
     vTaskDelete(NULL);
 }
@@ -158,7 +216,7 @@ esp_err_t esp_mesh_comm_p2p_start(void)
     static bool is_comm_p2p_started = false;
     if (!is_comm_p2p_started) {
         is_comm_p2p_started = true;
-        xTaskCreate(esp_mesh_p2p_tx_main, "MPTX", 3072, NULL, 5, NULL);
+        //xTaskCreate(esp_mesh_p2p_tx_main, "MPTX", 3072, NULL, 5, NULL);
         xTaskCreate(esp_mesh_p2p_rx_main, "MPRX", 3072, NULL, 5, NULL);
     }
     return ESP_OK;
