@@ -28,7 +28,7 @@
 #define RX_SIZE          (1500)
 #define TX_SIZE          (1460)
 #define AP_PASSWD        "MESH_PASS"
-#define MSG_SIZE         30
+#define MSG_SIZE         50
 
 /*******************************************************
  *                Variable Definitions
@@ -43,10 +43,11 @@ static mesh_addr_t mesh_parent_addr;
 static int mesh_layer = -1;
 static esp_netif_t *netif_sta = NULL;
 char msg[MSG_SIZE] = "STARTING...";
-char avoidAddr[20];
+char avoidAddr[MSG_SIZE];
 bool pendingMsg = false;
 float temperature;
 char sensorMsg[MSG_SIZE];
+mesh_addr_t from;
 
 /*******************************************************
  *                Function Declarations
@@ -68,7 +69,7 @@ void esp_mesh_p2p_tx_main(void *arg)
     data.proto = MESH_PROTO_BIN;
     data.tos = MESH_TOS_P2P;
     is_running = true;
-    char aux[20];
+    char aux[MSG_SIZE];
 
     while (is_running) {
         /* non-root do nothing but print */
@@ -96,13 +97,10 @@ void esp_mesh_p2p_tx_main(void *arg)
 
             for (i = 0; i < route_table_size; i++) {
                 sprintf(aux,MACSTR,MAC2STR(route_table[i].addr));
-                if (!strcmp(avoidAddr,aux) && pendingMsg)
-                {
-                    pendingMsg = false;
-                    err = esp_mesh_send(&route_table[i], &data, MESH_DATA_P2P, NULL, 0);
-                }
-                else
+                if (strcmp((char*)from.addr,(char*)route_table[i].addr) || i == 0)
                     err = 0;
+                else
+                    err = esp_mesh_send(&route_table[i], &data, MESH_DATA_P2P, NULL, 0);
                 
                 if (err) {
                     ESP_LOGE(MESH_TAG,
@@ -122,7 +120,7 @@ void esp_mesh_p2p_tx_main(void *arg)
 void esp_mesh_p2p_rx_main(void *arg)
 {
     esp_err_t err;
-    mesh_addr_t from;
+    
     mesh_data_t data;
     int flag = 0;
     data.data = rx_buf;
