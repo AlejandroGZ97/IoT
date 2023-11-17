@@ -43,7 +43,7 @@ static mesh_addr_t mesh_parent_addr;
 static int mesh_layer = -1;
 static esp_netif_t *netif_sta = NULL;
 char msg[MSG_SIZE] = "STARTING...";
-const char avoidAddr[MSG_SIZE];
+char avoidAddr[MSG_SIZE];
 bool pendingMsg = false;
 float temperature;
 char sensorMsg[MSG_SIZE];
@@ -69,7 +69,7 @@ void esp_mesh_p2p_tx_main(void *arg)
     data.proto = MESH_PROTO_BIN;
     data.tos = MESH_TOS_P2P;
     is_running = true;
-    const char aux[MSG_SIZE];
+    char aux[MSG_SIZE];
 
     while (is_running) {
         /* non-root do nothing but print */
@@ -95,30 +95,35 @@ void esp_mesh_p2p_tx_main(void *arg)
 
             memcpy(tx_buf, msg, sizeof(msg));
 
-            for (i = 0; i < route_table_size; i++) {
-                sprintf(aux,MACSTR,MAC2STR(route_table[i].addr));
-                if (!strcmp(aux,avoidAddr) || i == 0)
-                {
-                    ESP_LOGE(MESH_TAG,MACSTR" / "MACSTR" / NO",MAC2STR(from.addr),MAC2STR(route_table[i].addr));
-                    err = 0;
-                }
-                else
-                {
-                    ESP_LOGE(MESH_TAG,MACSTR" / "MACSTR" / SI",MAC2STR(from.addr),MAC2STR(route_table[i].addr));
-                    err = esp_mesh_send(&route_table[i], &data, MESH_DATA_P2P, NULL, 0);
-                }
+            if (pendingMsg)
+            {
+                pendingMsg = false;
                 
-                if (err) {
-                    ESP_LOGE(MESH_TAG,
-                            "[L:%d]parent:"MACSTR" to "MACSTR", heap:%" PRId32 "[err:0x%x, proto:%d, tos:%d]",
-                            mesh_layer, MAC2STR(mesh_parent_addr.addr),
-                            MAC2STR(route_table[i].addr), esp_get_minimum_free_heap_size(),
-                            err, data.proto, data.tos);
+                for (i = 0; i < route_table_size; i++) {
+                    sprintf(aux,MACSTR,MAC2STR(route_table[i].addr));
+                    if (!strcmp(aux,avoidAddr) || i == 0)
+                    {
+                        ESP_LOGE(MESH_TAG,MACSTR" / "MACSTR" / NO",MAC2STR(from.addr),MAC2STR(route_table[i].addr));
+                        err = 0;
+                    }
+                    else
+                    {
+                        ESP_LOGE(MESH_TAG,MACSTR" / "MACSTR" / SI",MAC2STR(from.addr),MAC2STR(route_table[i].addr));
+                        err = esp_mesh_send(&route_table[i], &data, MESH_DATA_P2P, NULL, 0);
+                    }
+                    
+                    if (err) {
+                        ESP_LOGE(MESH_TAG,
+                                "[L:%d]parent:"MACSTR" to "MACSTR", heap:%" PRId32 "[err:0x%x, proto:%d, tos:%d]",
+                                mesh_layer, MAC2STR(mesh_parent_addr.addr),
+                                MAC2STR(route_table[i].addr), esp_get_minimum_free_heap_size(),
+                                err, data.proto, data.tos);
+                    }
                 }
             }
             vTaskDelay(2000 / portTICK_PERIOD_MS);
             continue;
-        }
+        }   
     }
     vTaskDelete(NULL);
 }
@@ -135,17 +140,20 @@ void esp_mesh_p2p_rx_main(void *arg)
 
     while (is_running) {
         data.size = RX_SIZE;
-        err = esp_mesh_recv(&from, &data, portMAX_DELAY, &flag, NULL, 0);
-        sprintf(avoidAddr,MACSTR,MAC2STR(from.addr));
-        sprintf(msg,"%s",data.data);
-        pendingMsg = true;
-        if (err != ESP_OK || !data.size) {
-            ESP_LOGE(MESH_TAG, "err:0x%x, size:%d", err, data.size);
-            continue;
-        }
+        if (!pendingMsg)
+        {
+            err = esp_mesh_recv(&from, &data, portMAX_DELAY, &flag, NULL, 0);
+            sprintf(avoidAddr,MACSTR,MAC2STR(from.addr));
+            sprintf(msg,"%s",data.data);
+            pendingMsg = true;
+            if (err != ESP_OK || !data.size) {
+                ESP_LOGE(MESH_TAG, "err:0x%x, size:%d", err, data.size);
+                continue;
+            }
 
-        // Print the received message
-        ESP_LOGI(MESH_TAG, "Received message from "MACSTR": %s", MAC2STR(from.addr), data.data);
+            // Print the received message
+            ESP_LOGI(MESH_TAG, "Received message from "MACSTR": %s", MAC2STR(from.addr), data.data);
+        }
     }
     vTaskDelete(NULL);
 }
