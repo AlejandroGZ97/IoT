@@ -103,12 +103,12 @@ void esp_mesh_p2p_tx_main(void *arg)
                     sprintf(aux,MACSTR,MAC2STR(route_table[i].addr));
                     if (!strcmp(aux,avoidAddr) || i == 0)
                     {
-                        ESP_LOGE(MESH_TAG,MACSTR" / "MACSTR" / NO",MAC2STR(from.addr),MAC2STR(route_table[i].addr));
+                        //ESP_LOGE(MESH_TAG,MACSTR" / "MACSTR" / NO",MAC2STR(from.addr),MAC2STR(route_table[i].addr));
                         err = 0;
                     }
                     else
                     {
-                        ESP_LOGE(MESH_TAG,MACSTR" / "MACSTR" / SI",MAC2STR(from.addr),MAC2STR(route_table[i].addr));
+                        //ESP_LOGE(MESH_TAG,MACSTR" / "MACSTR" / SI",MAC2STR(from.addr),MAC2STR(route_table[i].addr));
                         err = esp_mesh_send(&route_table[i], &data, MESH_DATA_P2P, NULL, 0);
                     }
                     
