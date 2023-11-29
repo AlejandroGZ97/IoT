@@ -27,7 +27,7 @@
 #define RECV_TOPIC  "v1/devices/seralmar/attributes"
 #define TEMP_MSG_SIZE   25
 #define RECV_MSG        40
-#define STR_SIZE        10
+#define STR_SIZE        12
 
 #define LED_ACC     GPIO_NUM_13
 #define LED_BREAK   GPIO_NUM_12
@@ -124,14 +124,14 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
         //sprintf("TOPIC=%.*s\r", event->topic_len, event->topic);
         printf("%.*s\r\n", event->data_len, event->data);
         sprintf(recv_msg,"%.*s\r", event->data_len, event->data);
-        for (int i = 11, j = 0; recv_msg[i] != '"'; i++)
+        for (int i = 11, j = 0; recv_msg[i] != '"' || j >= STR_SIZE; i++)
         {
             recv_check[j] = recv_msg[i];
             ESP_LOGI(TAG, "%c",recv_check[j]);
             j++;
-            if (recv_msg[i] == ',')
+            if (recv_msg[i+1] == '"')
             {
-                recv_check[j+1] = 0;
+                recv_check[j] = '\0';
             }
             
         }
@@ -164,26 +164,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
             gpio_set_level(LED_LEFT,0);
             gpio_set_level(LED_RIGHT,1);
         }*/
-        if (!strcmp(recv_check,"Accelerate"))
-        {
-            gpio_set_level(LED_ACC,1);
-            gpio_set_level(LED_LEFT,1);
-        }
-        if (!strcmp(recv_check,"Break"))
-        {
-            gpio_set_level(LED_ACC,0);
-            gpio_set_level(LED_LEFT,0);
-        }
-        if (!strcmp(recv_check,"TurnLeft"))
-        {
-            gpio_set_level(LED_ACC,0);
-            gpio_set_level(LED_LEFT,1);
-        }
-        if (!strcmp(recv_check,"TurnRight"))
-        {
-            gpio_set_level(LED_ACC,1);
-            gpio_set_level(LED_LEFT,0);
-        }
+        
         
         break;
     case MQTT_EVENT_ERROR:
@@ -265,6 +246,28 @@ void app_main(void)
 
         msg_id = esp_mqtt_client_publish(current_client, MY_TOPIC,temp,0,1,0);
         vTaskDelay(1000 / portTICK_PERIOD_MS);
+        
+        if (!strcmp(recv_check,"Accelerate"))
+        {
+            gpio_set_level(LED_ACC,1);
+            gpio_set_level(LED_LEFT,1);
+        }
+        if (!strcmp(recv_check,"Break"))
+        {
+            gpio_set_level(LED_ACC,0);
+            gpio_set_level(LED_LEFT,0);
+        }
+        if (!strcmp(recv_check,"TurnLeft"))
+        {
+            gpio_set_level(LED_ACC,0);
+            gpio_set_level(LED_LEFT,1);
+        }
+        if (!strcmp(recv_check,"TurnRight"))
+        {
+            gpio_set_level(LED_ACC,1);
+            gpio_set_level(LED_LEFT,0);
+        }
+        printf("%s",recv_check);
     }
     
 }
