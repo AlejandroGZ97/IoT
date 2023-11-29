@@ -20,10 +20,8 @@
 
 #include "aht10.c"
 
-//#define SSID "P_AGZ"
-//#define PASS "clavePrac"
-#define SSID "3PesosDeInternet"
-#define PASS "Son3pesos."
+#define SSID "P_AGZ"
+#define PASS "clavePrac"
 #define BROKER_URL  "mqtt://test.mosquitto.org:1883"
 #define MY_TOPIC    "v1/devices/alejandro/temp"
 #define RECV_TOPIC  "v1/devices/seralmar/attributes"
@@ -138,7 +136,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
             
         }
         
-        if (!strcmp(recv_check,"Accelerate"))
+        /*if (!strcmp(recv_check,"Accelerate"))
         {
             gpio_set_level(LED_ACC,1);
             gpio_set_level(LED_BREAK,0);
@@ -165,6 +163,26 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
             gpio_set_level(LED_BREAK,0);
             gpio_set_level(LED_LEFT,0);
             gpio_set_level(LED_RIGHT,1);
+        }*/
+        if (!strcmp(recv_check,"Accelerate"))
+        {
+            gpio_set_level(LED_ACC,1);
+            gpio_set_level(LED_LEFT,1);
+        }
+        if (!strcmp(recv_check,"Break"))
+        {
+            gpio_set_level(LED_ACC,0);
+            gpio_set_level(LED_LEFT,0);
+        }
+        if (!strcmp(recv_check,"TurnLeft"))
+        {
+            gpio_set_level(LED_ACC,0);
+            gpio_set_level(LED_LEFT,1);
+        }
+        if (!strcmp(recv_check,"TurnRight"))
+        {
+            gpio_set_level(LED_ACC,1);
+            gpio_set_level(LED_LEFT,0);
         }
         
         break;
